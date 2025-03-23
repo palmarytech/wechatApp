@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/index/index"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#fff",
+    "navigationBarTitleText": "WeChat",
+    "navigationBarTextStyle": "black"
+  },
+  "permission": {
+    "scope.album": {
+      "desc": "你的相册权限将用于选择音频文件"
+    }
+  },
+  "requiredBackgroundModes": ["audio"],
+  "sitemapLocation": "sitemap.json"
+}
