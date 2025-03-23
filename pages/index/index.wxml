@@ -2,28 +2,29 @@
   <view hidden>{{refreshTrigger}}</view>
   <view class="title">100LS Listening&Speaking</view>
   <!-- 顶部：时间显示和进度条 -->
-  <view class="time-display">{{formattedCurrentTime}}/{{formattedEndTime}}（秒）</view>
+  <view class="time-display">
+    {{formattedCurrentTime}}/{{formattedEndTime}}（秒） {{currentLoop}}/{{loopTimes}}
+  </view>
   <slider bindchange="seekAudio" min="0" max="{{endTime}}" value="{{currentTime}}" step="0.1" class="progress-bar" />
   
   <!-- 中间：输入框和按钮 -->
   <view class="button-container">
-    <!-- 左侧：输入框 -->
+    <!-- 左侧：输入框和重置按钮 -->
     <view class="left-column">
       <input bindinput="setStartTime" placeholder="开始时间(秒)" type="digit" value="{{startTimeInput}}" class="input-box" />
       <input bindinput="setEndTime" placeholder="结束时间(秒)" type="digit" value="{{endTimeInput}}" class="input-box" />
       <input bindinput="setLoopTimes" placeholder="循环次数" type="number" value="{{loopTimesInput}}" class="input-box" />
+      <button class="reset-btn" bindtap="resetEndTime">重置</button>
     </view>
     <!-- 右侧：按钮 -->
     <view class="right-column">
       <button class="open-btn" bindtap="chooseAudio">导入文件</button>
       <button class="stop-btn" bindtap="stopAudio">停止</button>
       <button class="pause-btn" bindtap="pauseAudio">暂停</button>
-      
       <button class="play-btn" bindtap="playAudio">播放</button>
       <view class="switch-container">
         <switch bindchange="toggleVolume" checked="{{volumeEnabled}}" /> 增益
       </view>
-      <button class="reset-btn" bindtap="resetEndTime">重置</button>
     </view>
   </view>
   

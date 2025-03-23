@@ -18,29 +18,48 @@ Page({
     loopTimesInput: '100'
   },
   onLoad() {
-    // 请求音频播放权限
-    wx.authorize({
-      scope: 'scope.record',
-      success: () => {
-        this.initAudioContext();
-      },
-      fail: () => {
-        wx.showModal({
-          title: '提示',
-          content: '需要音频播放权限，请在设置中开启',
-          success: (res) => {
-            if (res.confirm) {
-              wx.openSetting({
-                success: (settingRes) => {
-                  if (settingRes.authSetting['scope.record']) {
-                    this.initAudioContext();
-                  }
-                }
-              });
-            }
-          }
-        });
+    // 创建背景音频管理器
+    this.backgroundAudioManager = wx.getBackgroundAudioManager();
+    
+    // 监听背景音频事件
+    this.backgroundAudioManager.onTimeUpdate(() => {
+      const currentTime = this.backgroundAudioManager.currentTime;
+      
+      // 更新当前时间显示
+      this.setData({
+        currentTime: currentTime || 0,
+        formattedCurrentTime: (currentTime || 0).toFixed(1)
+      });
+      
+      // 检查是否达到结束时间
+      if (this.data.endTime > 0 && currentTime >= this.data.endTime) {
+        console.log('达到结束时间:', currentTime.toFixed(2), '目标:', this.data.endTime.toFixed(2));
+        
+        // 停止当前播放
+        this.backgroundAudioManager.stop();
+        
+        // 处理循环
+        setTimeout(() => {
+          this.handleLoopPlayback();
+        }, 100);
       }
+    });
+
+    // 添加播放结束事件监听
+    this.backgroundAudioManager.onEnded(() => {
+      console.log('音频播放结束');
+      this.handleLoopPlayback();
+    });
+
+    // 添加停止事件监听
+    this.backgroundAudioManager.onStop(() => {
+      console.log('音频停止播放');
+      // 如果是手动停止，不进行循环
+      if (this.manualStop) {
+        this.manualStop = false;
+        return;
+      }
+      this.handleLoopPlayback();
     });
   },
   initAudioContext() {
@@ -49,7 +68,9 @@ Page({
     }
     
     // 创建音频上下文
-    this.audioCtx = wx.createInnerAudioContext();
+    this.audioCtx = wx.createInnerAudioContext({
+      useWebAudioImplement: false  // 使用原生音频播放器
+    });
     
     if (this.audioCtx) {
       // 设置音频属性
@@ -507,33 +528,23 @@ Page({
       return;
     }
     
-    console.log('准备播放音频:', this.data.audioSrc);
+    console.log('开始播放音频, 当前循环:', this.data.currentLoop);
     
-    // 确保音频源正确设置
-    if (this.audioCtx.src !== this.data.audioSrc) {
-      console.log('设置新的音频源');
-      this.audioCtx.src = this.data.audioSrc;
-    }
+    // 设置必要的属性
+    this.backgroundAudioManager.title = '音频循环播放';
+    this.backgroundAudioManager.epname = '音频循环播放';
+    this.backgroundAudioManager.singer = '音频循环播放';
     
-    // 设置音量
-    this.audioCtx.volume = 1.0;
-    console.log('设置音量:', this.audioCtx.volume);
+    // 设置音频源
+    this.backgroundAudioManager.src = this.data.audioSrc;
     
-    // 检查音频是否已暂停
-    if (this.audioCtx.paused) {
-      // 如果音频已暂停，从当前位置继续播放
-      console.log('从暂停位置继续播放:', this.audioCtx.currentTime);
-      this.audioCtx.play();
-    } else {
-      // 如果音频未暂停，从头开始播放
-      this.audioCtx.stop();
-      
-      // 重置循环计数
-      this.data.currentLoop = 0;
-      
-      // 开始播放
-      this.startPlaySegment();
-    }
+    // 开始播放
+    this.backgroundAudioManager.play();
+    
+    // 设置播放位置
+    setTimeout(() => {
+      this.backgroundAudioManager.seek(this.data.startTime);
+    }, 100);
   },
   startPlaySegment() {
     // 设置播放位置
@@ -542,7 +553,6 @@ Page({
     
     // 开始播放
     setTimeout(() => {
-      console.log('开始播放，循环次数:', this.data.currentLoop + 1, '/', this.data.loopTimes);
       this.audioCtx.play();
     }, 100);
   },
@@ -551,52 +561,38 @@ Page({
     
     if (this.data.currentLoop < this.data.loopTimes - 1) {
       // 增加循环计数
-      this.data.currentLoop++;
-      console.log('准备下一次循环播放，当前循环次数:', this.data.currentLoop);
+      this.setData({
+        currentLoop: this.data.currentLoop + 1
+      });
+      console.log('开始下一次循环，当前次数:', this.data.currentLoop);
       
-      // 停止当前播放
-      this.audioCtx.stop();
-      
-      // 延迟一段时间后开始下一次播放
+      // 重新开始播放
       setTimeout(() => {
-        // 开始下一次播放
-        this.startPlaySegment();
+        this.playAudio();
       }, 300);
     } else {
       // 循环完成
-      console.log('循环播放完成，总循环次数:', this.data.loopTimes);
-      this.audioCtx.stop();
-      this.data.currentLoop = 0;
+      console.log('循环播放完成');
       this.setData({
-        currentTime: 0,
-        formattedCurrentTime: '0.0'
+        currentLoop: 0
       });
+      this.manualStop = true;  // 标记为手动停止
+      this.backgroundAudioManager.stop();
     }
   },
   pauseAudio() {
-    if (this.audioCtx) {
-      console.log('暂停播放，当前位置:', this.audioCtx.currentTime);
-      this.audioCtx.pause();
+    if (this.backgroundAudioManager) {
+      this.backgroundAudioManager.pause();
     }
   },
   stopAudio() {
-    if (this.audioCtx) {
-      console.log('停止播放');
-      this.audioCtx.stop();
-      
-      // 设置当前时间为起始时间
+    if (this.backgroundAudioManager) {
+      this.manualStop = true;  // 标记为手动停止
+      this.backgroundAudioManager.stop();
+      // 重置循环计数
       this.setData({
-        currentTime: this.data.startTime,
-        formattedCurrentTime: this.data.startTime.toFixed(1)
+        currentLoop: 0
       });
-      
-      // 重置循环计数为0（这样第一次播放时会是第1次循环）
-      this.data.currentLoop = 0;
-      
-      // 将音频位置设置到起始时间
-      setTimeout(() => {
-        this.audioCtx.seek(this.data.startTime);
-      }, 100);
     }
   },
   seekAudio(e) {
@@ -627,8 +623,7 @@ Page({
   },
   toggleVolume(e) {
     const enabled = e.detail.value;
-    const newVolume = enabled ? this.data.baseVolume * 2 : this.data.baseVolume;
-    this.audioCtx.volume = Math.min(newVolume, 1);
+    // 背景音频不支持直接调整音量，需要用户通过系统音量控制
     this.setData({
       volumeEnabled: enabled
     });
@@ -666,5 +661,19 @@ Page({
         }
       }
     });
+  },
+  onShow() {
+    // 页面显示时，检查并恢复播放状态
+    if (this.audioCtx) {
+      console.log('页面显示，检查播放状态');
+      if (!this.audioCtx.paused) {
+        // 如果之前在播放，则恢复播放
+        this.audioCtx.play();
+      }
+    }
+  },
+  onHide() {
+    // 页面隐藏时，不要暂停播放
+    console.log('页面隐藏，保持播放状态');
   }
 });
