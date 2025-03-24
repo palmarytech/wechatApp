@@ -15,7 +15,9 @@ Page({
     baseVolume: 0.5,
     refreshTrigger: 0,
     audioDataUrl: '',
-    loopTimesInput: '100'
+    loopTimesInput: '100',
+    noteText: '',
+    noteInput: ''
   },
   onLoad() {
     // 创建背景音频管理器
@@ -675,5 +677,12 @@ Page({
   onHide() {
     // 页面隐藏时，不要暂停播放
     console.log('页面隐藏，保持播放状态');
+  },
+  setNoteText(e) {
+    const inputValue = e.detail.value;
+    this.setData({
+      noteInput: inputValue,
+      noteText: inputValue
+    });
   }
 });

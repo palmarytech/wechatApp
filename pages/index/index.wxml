@@ -22,10 +22,15 @@
       <button class="stop-btn" bindtap="stopAudio">停止</button>
       <button class="pause-btn" bindtap="pauseAudio">暂停</button>
       <button class="play-btn" bindtap="playAudio">播放</button>
-      <view class="switch-container">
-        <switch bindchange="toggleVolume" checked="{{volumeEnabled}}" /> 增益
-      </view>
     </view>
+  </view>
+  
+  <!-- 笔记输入框 -->
+  <textarea bindinput="setNoteText" placeholder="添加笔记" value="{{noteInput}}" class="note-input" maxlength="-1" />
+  
+  <!-- 增益按钮 -->
+  <view class="switch-container">
+    <switch bindchange="toggleVolume" checked="{{volumeEnabled}}" /> 增益
   </view>
   
   <!-- 底部：占位文本 -->
